@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RTMP Pose Recognition</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        /* Стили для размещения видео и кнопок */
+        .video-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        .video-container video {
+            margin-right: 20px; /* Отступ между видео */
+        }
+        .video-container:last-child {
+            margin-right: 0; /* Убираем отступ для последнего видео */
+        }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px; /* Расстояние между кнопками */
+            margin-top: 10px;
+        }
+        /* Стили для превью изображений */
+        #frames-preview img {
+            margin: 5px;
+            border: 1px solid #ccc;
+            max-width: 200px;
+            height: auto;
+        }
+        /* Скрываем кнопку "Показать изображения" по умолчанию */
+        #show-images-button {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h1>RTMP Pose Recognition</h1>
+
+    <!-- Форма для ввода имени атлета -->
+    <form id="start-form">
+        <label for="name-atlet">Имя атлета:</label>
+        <input type="text" id="name-atlet" name="name_atlet" required>
+        <button type="submit">Запустить распознавание</button>
+    </form>
+
+    <!-- Контейнер для видео -->
+    <div class="video-container">
+        <!-- Входное видео -->
+        <div>
+            <h2>Входное видео</h2>
+            <video id="input-video" width="640" height="480" controls autoplay></video>
+        </div>
+
+        <!-- Выходное видео -->
+        <div>
+            <h2>Выходное видео с распознанными позами</h2>
+            <video id="output-video" width="640" height="480" controls autoplay></video>
+        </div>
+    </div>
+
+    <!-- Кнопки -->
+    <div class="button-container">
+        <button id="refresh-input-button">Обновить входное видео</button>
+        <button id="refresh-output-button">Обновить выходное видео</button>
+        <button id="stop-button" disabled>Остановить</button>
+        <button id="show-images-button">Показать изображения</button>
+    </div>
+
+    <!-- Превью распознанных изображений -->
+    <h2>Превью распознанных изображений</h2>
+    <div id="frames-preview"></div>
+
+    <!-- Ссылка на сохраненное видео -->
+    <h2>Сохраненное видео</h2>
+    <a id="output-video-link" href="#" style="display: none;">Скачать видео</a>
+
+    <script>
+        // Инициализация HLS для видеоплееров
+        function loadHLSVideo(videoElement, hlsUrl) {
+            if (Hls.isSupported()) {
+                const hls = new Hls();
+                hls.loadSource(hlsUrl);
+                hls.attachMedia(videoElement);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    videoElement.play();
+                });
+            } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+                videoElement.src = hlsUrl;
+                videoElement.addEventListener('loadedmetadata', () => {
+                    videoElement.play();
+                });
+            }
+        }
+
+        // Загрузка HLS-видео при загрузке страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            const inputVideo = document.getElementById('input-video');
+            const outputVideo = document.getElementById('output-video');
+
+            const publicIp = "{{ public_ip }}";  // Получаем IP из Flask
+            const inputHlsUrl = `http://${publicIp}:8081/hls/test1.m3u8`;
+            const outputHlsUrl = `http://${publicIp}:8081/hls/test11.m3u8`;
+
+            loadHLSVideo(inputVideo, inputHlsUrl);
+            loadHLSVideo(outputVideo, outputHlsUrl);
+
+            // Обработчик кнопки "Обновить входное видео"
+            const refreshInputButton = document.getElementById('refresh-input-button');
+            refreshInputButton.addEventListener('click', () => {
+                loadHLSVideo(inputVideo, inputHlsUrl);
+                alert("Входное видео обновлено!");
+            });
+
+            // Обработчик кнопки "Обновить выходное видео"
+            const refreshOutputButton = document.getElementById('refresh-output-button');
+            refreshOutputButton.addEventListener('click', () => {
+                loadHLSVideo(outputVideo, outputHlsUrl);
+                alert("Выходное видео обновлено!");
+            });
+        });
+
+        // Обработчики событий
+        const startForm = document.getElementById('start-form');
+        const stopButton = document.getElementById('stop-button');
+        const showImagesButton = document.getElementById('show-images-button');
+        const framesPreview = document.getElementById('frames-preview');
+        const outputVideoLink = document.getElementById('output-video-link');
+
+        let nameAtlet = '';
+
+        // Запуск процесса
+        startForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            nameAtlet = document.getElementById('name-atlet').value;
+
+            const response = await fetch('/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `name_atlet=${encodeURIComponent(nameAtlet)}`
+            });
+
+            const result = await response.json();
+            if (result.message) {
+                alert(result.message);
+                stopButton.disabled = false;
+
+                // Перезагружаем выходной поток
+                const outputVideo = document.getElementById('output-video');
+                const publicIp = "{{ public_ip }}";
+                const outputHlsUrl = `http://${publicIp}:8081/hls/test11.m3u8`;
+                loadHLSVideo(outputVideo, outputHlsUrl);
+            } else {
+                alert(result.error);
+            }
+        });
+
+        // Остановка процесса
+        stopButton.addEventListener('click', async () => {
+            try {
+                // Отправляем запрос на сервер для остановки процесса
+                const response = await fetch('/stop', { method: 'POST' });
+                const result = await response.json();
+
+                if (result.message) {
+                    alert(result.message);
+                    stopButton.disabled = true; // Делаем кнопку "Остановить" неактивной
+                    showImagesButton.style.display = 'inline-block'; // Показываем кнопку "Показать изображения"
+                } else {
+                    alert(result.error);
+                }
+            } catch (error) {
+                alert("Произошла ошибка при остановке процесса.");
+                console.error(error);
+            }
+        });
+
+        // Показать изображения
+
+        showImagesButton.addEventListener('click', async () => {
+            try {
+                const framesResponse = await fetch(`/frames/${nameAtlet}`);
+                const framesData = await framesResponse.json();
+
+                if (framesData.error) {
+                    alert(framesData.error); // Выводим сообщение об ошибке
+                    framesPreview.innerHTML = '<p>Не удалось загрузить изображения.</p>';
+                } else {
+                    if (framesData.frames && framesData.frames.length > 0) {
+                        framesPreview.innerHTML = framesData.frames.map(frame => `
+                            <img src="${frame}" alt="Frame" width="200">
+                        `).join('');
+                    } else {
+                        framesPreview.innerHTML = '<p>Нет сохраненных кадров.</p>';
+                    }
+
+                    if (framesData.output_video) {
+                        outputVideoLink.href = framesData.output_video; // Присваиваем URL видео
+                        outputVideoLink.style.display = 'block'; // Показываем ссылку
+                    } else {
+                        outputVideoLink.style.display = 'none'; // Скрываем ссылку
+                        alert("Сохраненное видео не найдено.");
+                    }
+                }
+            } catch (error) {
+                alert("Произошла ошибка при загрузке изображений.");
+                console.error(error);
+            }
+        });
+    </script>
+</body>
+</html>
