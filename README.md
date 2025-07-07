@@ -1,7 +1,7 @@
-Получен полный образ виртуальной машины - ubuntu-vm.qcow2 (57,7 Гбайт) Архив (ubuntu-vm.zip - 32,7 Гбай) выложен в облако: https://cloud.mail.ru/public/xVVz/7Rhn3M8AM
+## Получен полный образ виртуальной машины - ubuntu-vm.qcow2 (57,7 Гбайт) Архив (ubuntu-vm.zip - 32,7 Гбай) выложен в облако: https://cloud.mail.ru/public/xVVz/7Rhn3M8AM
 
-Инструкция по запуску кода на виртуальной машине
-
+## Инструкция по запуску кода на виртуальной машине
+```
 Запуск Nginx sudo /usr/local/nginx/sbin/nginx
 
 Убедитесь, что Nginx запущен ps aux | grep nginx
@@ -24,4 +24,4 @@ Debugger is active!
 Debugger PIN: 144-364-051
 
 Проверка в браузере: http://<Публичный IP сервера>:5000/
-
+```
