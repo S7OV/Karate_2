@@ -18,6 +18,19 @@ Pose2Sim и EasyMocap
 
 ### Получен полный образ виртуальной машины - ubuntu-vm.qcow2 (57,7 Гбайт) Архив (ubuntu-vm.zip - 32,7 Гбай) выложен в облако: https://cloud.mail.ru/public/xVVz/7Rhn3M8AM
 
+#### Код RTMP-стримминга
+code/11_app.py/12_app.py — Flask-сервер для управления RTMP-стримингом, обработки видео и отображения результатов.
+
+code/11_index.html/12_index.html — Веб-интерфейс с превью видео, кнопками управления и формой для ввода данных.
+
+code/11_rtmp_pose_mp_angle_10.py — Реализация пайплайна: прием RTMP-потока, анализ углов между суставами, сохранение результатов.
+
+#### Модель 
+- model/random_forest_model_9_no_rei.pkl
+- model/rscaler_9_no_rei.pkl
+- model/rlabel_encoder_9_no_rei.pkl
+
+
 ### Инструкция по запуску кода на виртуальной машине
 ```
 Запуск Nginx sudo /usr/local/nginx/sbin/nginx
